@@ -9,15 +9,10 @@ Golang Moderator and Soundboard Bot for Discord
 
 # How to setup
 
-Firstly, install the bot 
+Install the bot and run once to generate a config file, then Configure at least ```BotToken``` and ```GuildID```
 ```
 go get github.com/ottsel/armacbot/
-go install github.com/ottsel/armacbot/
 ```
-Then, Make a local copy of ```config-default.json``` and rename it to ```config.json```
-
-Finally, Configure at least ```BotToken``` and ```GuildID```
-
 #Thats it!
 
 You wanted a note down here, didn't you?
