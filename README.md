@@ -15,7 +15,7 @@ go get github.com/ottsel/armacbot/
 ```
 #Config options
 
-## To copy IDs of things like messages, channels and guilds, enable developer mode under User settings -> Appearance. Now you can right click things and copy their IDs!
+## To copy IDs of messages, channels and guilds, enable developer mode under User settings -> Appearance. Now you can right click things and copy their IDs!
 
 * `BotToken` - This is your bot user's token.
 * `GuildID` - This is your Guild's `ID`.
