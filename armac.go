@@ -9,10 +9,12 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
 	sounds []os.FileInfo
+	vc     *discordgo.VoiceConnection
 
 	adminRoleID string
 
@@ -38,6 +40,13 @@ func init() {
 	}
 	sounds, _ = ioutil.ReadDir("sounds")
 
+	if _, e := os.Stat("config.json"); os.IsNotExist(e) {
+		os.Create("config.json")
+		configText := []byte("{\n\t\"BotToken\": \"\",\n\t\"GuildID\": \"\",\n\n\t\"SoundboardCommandKey\": \"!\",\n\t\"AdminCommandKey\": \"*\",\n\n\t\"CommandChannelName\": \"\",\n \n\t\"SoundboardMessageID\": \"\"\n}")
+		ioutil.WriteFile("config.json", configText, os.ModePerm)
+		log.Println("No config file found, creating one. Please configure and restart.")
+		return
+	}
 	configFile, _ := os.Open("config.json")
 	decoder := json.NewDecoder(configFile)
 	cfg = Configuration{}
@@ -54,7 +63,7 @@ func main() {
 		log.Println("Error:", e)
 		return
 	}
-	dg.AddHandler(ready)
+	dg.AddHandlerOnce(ready)
 	dg.AddHandler(messageCreate)
 	dg.AddHandler(presenceUpdate)
 	dg.AddHandler(voiceState)
@@ -65,15 +74,11 @@ func main() {
 	<-make(chan struct{})
 	return
 }
-func ready(s *discordgo.Session, event *discordgo.Ready) {
-	guild, e := s.Guild(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
-	}
-	for _, p := range guild.Presences {
-		correctRoles(s, p)
-	}
-	listSounds(s)
+func ready(s *discordgo.Session, event *discordgo.Event) {
+	go func() {
+		time.Sleep(time.Second * 2)
+		listSounds(s)
+	}()
 }
 func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 	if !mc.Author.Bot {
@@ -102,14 +107,20 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 				if playing {
 					dgvoice.KillPlayer()
 					playing = false
+					vc.Disconnect()
 					return
 				} else {
 					return
 				}
 			}
 			soundString := strings.Replace(mc.Content, cfg.SoundboardCommandKey, "", 1) + ".mp3"
+			sounds, _ = ioutil.ReadDir("sounds")
 			for _, f := range sounds {
 				if f.Name() == soundString {
+					if playing {
+						dgvoice.KillPlayer()
+						playing = false
+					}
 					playSound(s, mc.Author, soundString)
 				}
 			}
@@ -268,19 +279,25 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 	for _, v := range guild.VoiceStates {
 		if v.UserID == user.ID {
 			if v.ChannelID != "" {
-				vc, e := s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
-				if e != nil {
-					log.Println("Error:", e)
-					return
-				}
-				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-				if playing {
+				go func() {
+					var e error
+					vc, e = s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
+
+					if e != nil {
+						log.Println("Error:", e)
+						return
+					}
+					log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
+					if playing {
+						dgvoice.KillPlayer()
+					}
+					playing = true
+					dgvoice.PlayAudioFile(vc, ("sounds/" + file))
 					dgvoice.KillPlayer()
-				}
-				playing = true
-				dgvoice.PlayAudioFile(vc, ("sounds/" + file))
-				dgvoice.KillPlayer()
-				playing = false
+					time.Sleep(time.Second / 2)
+					playing = false
+					vc.Disconnect()
+				}()
 			} else {
 				return
 			}
