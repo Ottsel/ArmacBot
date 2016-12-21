@@ -11,6 +11,7 @@ Golang Moderator and Soundboard Bot for Discord
 
 Firstly, install the bot 
 ```
+go get github.com/ottsel/armacbot/
 go install github.com/ottsel/armacbot/
 ```
 Then, Make a local copy of ```config-default.json``` and rename it to ```config.json```
