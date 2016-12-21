@@ -1,0 +1,11 @@
+{
+    "BotToken": "",
+    "GuildID": "",
+
+    "SoundboardCommandKey": "!",
+    "AdminCommandKey": "*",
+
+    "CommandChannelName": "",  
+
+    "SoundboardMessageID": ""
+}

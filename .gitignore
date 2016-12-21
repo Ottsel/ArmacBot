@@ -6,6 +6,7 @@
 # Folders
 _obj
 _test
+sounds
 
 # Architecture specific extensions/prefixes
 *.[568vq]
@@ -73,3 +74,4 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+config.json
