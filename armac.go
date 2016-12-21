@@ -77,6 +77,13 @@ func main() {
 func ready(s *discordgo.Session, event *discordgo.Event) {
 	go func() {
 		time.Sleep(time.Second * 2)
+		guild, e := s.Guild(cfg.GuildID)
+		if e != nil {
+			log.Println("Error:", e)
+		}
+		for _, p := range guild.Presences {
+			correctRoles(s, p)
+		}
 		listSounds(s)
 	}()
 }
