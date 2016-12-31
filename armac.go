@@ -1,9 +1,8 @@
-package main
+package armacbot
 
 import (
 	"C"
 	"encoding/json"
-	"github.com/bwmarrin/dgvoice"
 	"github.com/bwmarrin/discordgo"
 	"io/ioutil"
 	"log"
@@ -13,13 +12,8 @@ import (
 )
 
 var (
-	sounds []os.FileInfo
-	vc     *discordgo.VoiceConnection
-
+	sounds      []os.FileInfo
 	adminRoleID string
-
-	playing bool = false
-	isInit  bool = false
 )
 
 type Configuration struct {
@@ -56,7 +50,6 @@ func init() {
 		return
 	}
 }
-
 func main() {
 	dg, e := discordgo.New("Bot " + cfg.BotToken)
 	if e != nil {
@@ -111,10 +104,8 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 				}
 			}
 			if mc.Content == cfg.SoundboardCommandKey+"stop" {
-				if playing {
-					dgvoice.KillPlayer()
-					playing = false
-					vc.Disconnect()
+				if !run.ProcessState.Exited() {
+					KillPlayer()
 					return
 				} else {
 					return
@@ -124,9 +115,8 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			sounds, _ = ioutil.ReadDir("sounds")
 			for _, f := range sounds {
 				if f.Name() == soundString {
-					if playing {
-						dgvoice.KillPlayer()
-						playing = false
+					if !run.ProcessState.Exited() {
+						KillPlayer()
 					}
 					playSound(s, mc.Author, soundString)
 				}
@@ -286,25 +276,18 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 	for _, v := range guild.VoiceStates {
 		if v.UserID == user.ID {
 			if v.ChannelID != "" {
-				go func() {
-					var e error
-					vc, e = s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
-
-					if e != nil {
-						log.Println("Error:", e)
-						return
-					}
-					log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-					if playing {
-						dgvoice.KillPlayer()
-					}
-					playing = true
-					dgvoice.PlayAudioFile(vc, ("sounds/" + file))
-					dgvoice.KillPlayer()
-					time.Sleep(time.Second / 2)
-					playing = false
-					vc.Disconnect()
-				}()
+				var e error
+				vc, e := s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
+				if e != nil {
+					log.Println("Error:", e)
+					return
+				}
+				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
+				if !run.ProcessState.Exited() {
+					KillPlayer()
+				}
+				PlayAudioFile(vc, ("sounds/" + file))
+				KillPlayer()
 			} else {
 				return
 			}
