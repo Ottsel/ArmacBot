@@ -1,4 +1,4 @@
-package armacbot
+package main
 
 import (
 	"C"
