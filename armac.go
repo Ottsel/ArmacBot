@@ -14,7 +14,6 @@ import (
 
 var (
 	sounds []os.FileInfo
-	vc     *discordgo.VoiceConnection
 
 	adminRoleID string
 
@@ -114,7 +113,6 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 				if playing {
 					dgvoice.KillPlayer()
 					playing = false
-					vc.Disconnect()
 					return
 				} else {
 					return
@@ -288,8 +286,7 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 			if v.ChannelID != "" {
 				go func() {
 					var e error
-					vc, e = s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
-
+					vc, e := s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
 					if e != nil {
 						log.Println("Error:", e)
 						return
@@ -303,7 +300,6 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 					dgvoice.KillPlayer()
 					time.Sleep(time.Second / 2)
 					playing = false
-					vc.Disconnect()
 				}()
 			} else {
 				return
