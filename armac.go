@@ -107,7 +107,7 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			}
 			if mc.Content == cfg.SoundboardCommandKey+"stop" {
 				if playing {
-					voicelib.KillPlayer()
+					dgvoice.KillPlayer()
 					playing = false
 					return
 				} else {
@@ -119,7 +119,7 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			for _, f := range sounds {
 				if f.Name() == soundString {
 					if playing {
-						voicelib.KillPlayer()
+						dgvoice.KillPlayer()
 						playing = false
 					}
 					playSound(s, mc.Author, soundString)
@@ -288,11 +288,11 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 				}
 				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
 				if playing {
-					voicelib.KillPlayer()
+					dgvoice.KillPlayer()
 					playing = false
 				}
-				voicelib.PlayAudioFile(vc, ("sounds/" + file))
-				voicelib.KillPlayer()
+				dgvoice.PlayAudioFile(vc, ("sounds/" + file))
+				dgvoice.KillPlayer()
 			} else {
 				return
 			}
