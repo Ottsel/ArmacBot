@@ -14,6 +14,7 @@ import (
 var (
 	sounds      []os.FileInfo
 	adminRoleID string
+	playing     bool = false
 )
 
 type Configuration struct {
@@ -104,8 +105,9 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 				}
 			}
 			if mc.Content == cfg.SoundboardCommandKey+"stop" {
-				if !run.ProcessState.Exited() {
+				if playing {
 					KillPlayer()
+					playing = false
 					return
 				} else {
 					return
@@ -115,8 +117,9 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			sounds, _ = ioutil.ReadDir("sounds")
 			for _, f := range sounds {
 				if f.Name() == soundString {
-					if !run.ProcessState.Exited() {
+					if playing {
 						KillPlayer()
+						playing = false
 					}
 					playSound(s, mc.Author, soundString)
 				}
@@ -283,8 +286,9 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 					return
 				}
 				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-				if !run.ProcessState.Exited() {
+				if playing {
 					KillPlayer()
+					playing = false
 				}
 				PlayAudioFile(vc, ("sounds/" + file))
 				KillPlayer()
