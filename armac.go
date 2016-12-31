@@ -3,8 +3,8 @@ package main
 import (
 	"C"
 	"encoding/json"
+	"github.com/bwmarrin/dgvoice"
 	"github.com/bwmarrin/discordgo"
-	"github.com/ottsel/voicelib"
 	"io/ioutil"
 	"log"
 	"os"
