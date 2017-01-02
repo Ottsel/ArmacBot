@@ -2,6 +2,7 @@ package main
 
 import (
 	"C"
+	"bytes"
 	"encoding/json"
 	"github.com/bwmarrin/dgvoice"
 	"github.com/bwmarrin/discordgo"
@@ -44,12 +45,12 @@ func init() {
 		return
 	}
 	configFile, _ := os.Open("config.json")
-	configFileContents, e := ioutil.ReadFile("config.json")
+	configFileContents, e := []byte(ioutil.ReadFile("config.json"))
 	if e != nil {
 		log.Println(e)
 		return
 	}
-	if configFileContents == configText {
+	if bytes.Compare(configFileContents, configText) {
 		log.Println("Not configured, aborting. Please configure and restart")
 		return
 	} else {
