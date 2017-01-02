@@ -45,7 +45,7 @@ func init() {
 		return
 	}
 	configFile, _ := os.Open("config.json")
-	configFileContents, e := []byte(ioutil.ReadFile("config.json"))
+	configFileContents, e := ioutil.ReadFile("config.json")
 	if e != nil {
 		log.Println(e)
 		return
