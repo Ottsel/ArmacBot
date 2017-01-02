@@ -15,7 +15,8 @@ import (
 var (
 	sounds      []os.FileInfo
 	adminRoleID string
-	playing     bool = false
+	playing     bool   = false
+	configText  []byte = []byte("{\n\t\"BotToken\": \"\",\n\t\"GuildID\": \"\",\n\n\t\"SoundboardCommandKey\": \"!\",\n\t\"AdminCommandKey\": \"*\",\n\n\t\"CommandChannelName\": \"\",\n \n\t\"SoundboardMessageID\": \"\"\n}")
 )
 
 type Configuration struct {
@@ -38,18 +39,23 @@ func init() {
 
 	if _, e := os.Stat("config.json"); os.IsNotExist(e) {
 		os.Create("config.json")
-		configText := []byte("{\n\t\"BotToken\": \"\",\n\t\"GuildID\": \"\",\n\n\t\"SoundboardCommandKey\": \"!\",\n\t\"AdminCommandKey\": \"*\",\n\n\t\"CommandChannelName\": \"\",\n \n\t\"SoundboardMessageID\": \"\"\n}")
 		ioutil.WriteFile("config.json", configText, os.ModePerm)
-		log.Println("No config file found, creating one. Please configure and restart.")
+		log.Println("No config file found, creating one. Please configure and restart")
 		return
 	}
 	configFile, _ := os.Open("config.json")
-	decoder := json.NewDecoder(configFile)
-	cfg = Configuration{}
-	e := decoder.Decode(&cfg)
-	if e != nil {
-		log.Println("Error:", e)
-		return
+	if ioutil.ReadFile(configFile.Name()) == configText {
+		log.Println("Not configured, aborting")
+		log.Println("Config file contents:")
+		log.Println(ioutil.ReadFile(configFile.Name()))
+	} else {
+		decoder := json.NewDecoder(configFile)
+		cfg = Configuration{}
+		e := decoder.Decode(&cfg)
+		if e != nil {
+			log.Println("Error:", e)
+			return
+		}
 	}
 }
 func main() {
