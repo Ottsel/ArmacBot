@@ -44,9 +44,14 @@ func init() {
 		return
 	}
 	configFile, _ := os.Open("config.json")
-	configFileContents := ioutil.ReadFile("config.json")
+	configFileContents, e := ioutil.ReadFile("config.json")
+	if e != nil {
+		log.Println(e)
+		return
+	}
 	if configFileContents == configText {
-		log.Println("Not configured, aborting. Please configure and restart")
+		log.Println("Not configured, aborting. Please configure and restart")\
+		return
 	} else {
 		decoder := json.NewDecoder(configFile)
 		cfg = Configuration{}
