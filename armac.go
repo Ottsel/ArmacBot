@@ -50,7 +50,7 @@ func init() {
 		log.Println(e)
 		return
 	}
-	if bytes.Compare(configFileContents, configText) {
+	if bytes.Compare(configFileContents, configText) == 0 {
 		log.Println("Not configured, aborting. Please configure and restart")
 		return
 	} else {
