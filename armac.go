@@ -129,10 +129,6 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			sounds, _ = ioutil.ReadDir("sounds")
 			for _, f := range sounds {
 				if f.Name() == soundString {
-					if playing {
-						dgvoice.KillPlayer()
-						playing = false
-					}
 					playSound(s, mc.Author, soundString)
 				}
 			}
@@ -303,7 +299,9 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 					playing = false
 				}
 				dgvoice.PlayAudioFile(vc, ("sounds/" + file))
+				playing = true
 				dgvoice.KillPlayer()
+				playing = false
 			} else {
 				return
 			}
