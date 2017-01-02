@@ -50,7 +50,7 @@ func init() {
 		return
 	}
 	if configFileContents == configText {
-		log.Println("Not configured, aborting. Please configure and restart")\
+		log.Println("Not configured, aborting. Please configure and restart")
 		return
 	} else {
 		decoder := json.NewDecoder(configFile)
