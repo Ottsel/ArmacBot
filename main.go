@@ -4,7 +4,6 @@ import (
 	"C"
 	"bytes"
 	"encoding/json"
-	"github.com/bwmarrin/dgvoice"
 	"github.com/bwmarrin/discordgo"
 	"io/ioutil"
 	"log"
@@ -118,7 +117,7 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			}
 			if mc.Content == cfg.SoundboardCommandKey+"stop" {
 				if playing {
-					dgvoice.KillPlayer()
+					KillPlayer()
 					playing = false
 					return
 				} else {
@@ -295,12 +294,12 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 				}
 				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
 				if playing {
-					dgvoice.KillPlayer()
+					KillPlayer()
 					playing = false
 				}
-				dgvoice.PlayAudioFile(vc, ("sounds/" + file))
+				PlayAudioFile(vc, ("sounds/" + file))
 				playing = true
-				dgvoice.KillPlayer()
+				KillPlayer()
 				playing = false
 			} else {
 				return
