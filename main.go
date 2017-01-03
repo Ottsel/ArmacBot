@@ -287,7 +287,10 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 				}
 				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
 				KillPlayer()
-				PlayAudioFile(vc, ("sounds/" + file))
+				go func() {
+					time.Sleep(time.Millisecond * 200)
+					PlayAudioFile(vc, ("sounds/" + file))
+				}()
 			} else {
 				return
 			}
