@@ -15,7 +15,6 @@ import (
 var (
 	sounds      []os.FileInfo
 	adminRoleID string
-	playing     bool   = false
 	configText  []byte = []byte("{\n\t\"BotToken\": \"\",\n\t\"GuildID\": \"\",\n\n\t\"SoundboardCommandKey\": \"!\",\n\t\"AdminCommandKey\": \"*\",\n\n\t\"CommandChannelName\": \"\",\n \n\t\"SoundboardMessageID\": \"\"\n}")
 )
 
@@ -103,7 +102,6 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 			}
 		}
 		if strings.HasPrefix(mc.Content, cfg.SoundboardCommandKey) {
-			listSounds(s)
 			channel, e := s.Channel(mc.ChannelID)
 			if e != nil {
 				log.Println("Error:", e)
@@ -116,13 +114,8 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 				}
 			}
 			if mc.Content == cfg.SoundboardCommandKey+"stop" {
-				if playing {
-					KillPlayer()
-					playing = false
-					return
-				} else {
-					return
-				}
+				KillPlayer()
+				return
 			}
 			soundString := strings.Replace(mc.Content, cfg.SoundboardCommandKey, "", 1) + ".mp3"
 			sounds, _ = ioutil.ReadDir("sounds")
@@ -293,14 +286,8 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 					return
 				}
 				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-				if playing {
-					KillPlayer()
-					playing = false
-				}
-				PlayAudioFile(vc, ("sounds/" + file))
-				playing = true
 				KillPlayer()
-				playing = false
+				PlayAudioFile(vc, ("sounds/" + file))
 			} else {
 				return
 			}

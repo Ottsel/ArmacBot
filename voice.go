@@ -44,6 +44,7 @@ var (
 	run         *exec.Cmd
 	sendpcm     bool
 	recvpcm     bool
+	hasrun      bool
 	recv        chan *discordgo.Packet
 	send        chan []int16
 	mu          sync.Mutex
@@ -169,6 +170,8 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string) {
 	if err != nil {
 		fmt.Println("RunStart Error:", err)
 		return
+	} else {
+		hasrun = true
 	}
 
 	// Send "speaking" packet over the voice websocket
@@ -205,5 +208,8 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string) {
 // this method may be removed later in favor of using chans or bools to
 // request a stop.
 func KillPlayer() {
-	run.Process.Kill()
+	if hasrun {
+		run.Process.Kill()
+		hasrun = false
+	}
 }
