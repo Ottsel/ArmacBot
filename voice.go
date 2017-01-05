@@ -1,16 +1,3 @@
-/*******************************************************************************
- * This is very experimental code and probably a long way from perfect or
- * ideal.  Please provide feed back on areas that would improve performance
- *
- */
-
-// **********************************************************************
-// NOTE :: This is getting closer to a Opus<->PCM layer for Discordgo and will
-// probably eventually move into a sub-folder of the Discordgo package.
-// **********************************************************************
-
-// Package dgvoice provides opus encoding and audio file playback for the
-// Discordgo package.
 package main
 
 import (
@@ -26,11 +13,6 @@ import (
 	"layeh.com/gopus"
 )
 
-// NOTE: This API is not final and these are likely to change.
-
-// Technically the below settings can be adjusted however that poses
-// a lot of other problems that are not handled well at this time.
-// These below values seem to provide the best overall performance
 const (
 	channels  int = 2                   // 1 for mono, 2 for stereo
 	frameRate int = 48000               // audio sampling rate
@@ -204,9 +186,6 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string) {
 	}
 }
 
-// KillPlayer forces the player to stop by killing the ffmpeg cmd process
-// this method may be removed later in favor of using chans or bools to
-// request a stop.
 func KillPlayer() {
 	if hasrun {
 		run.Process.Kill()
