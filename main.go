@@ -133,61 +133,7 @@ func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 	}
 }
 func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-	if authenticate(s, p.User) {
-		log.Println("Admin, cannot modify role")
-		return
-	}
-	var updatedRoles []string
-	var role string
-
-	guildRoles, e := s.GuildRoles(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	for _, gr := range guildRoles {
-		if p.User.Bot {
-			if gr.Name == "Bots" {
-				role = "Bot"
-				updatedRoles = append(updatedRoles, gr.ID)
-			}
-		} else {
-			if p.Game != nil {
-				if gr.Name == p.Game.Name {
-					role = gr.Name
-					updatedRoles = append(updatedRoles, gr.ID)
-				}
-			} else {
-				guild, e := s.Guild(cfg.GuildID)
-				if e != nil {
-					log.Println("Error:", e)
-				}
-				role = guild.Name
-				updatedRoles = append(updatedRoles, guild.ID)
-			}
-			if role == "" {
-				for _, gr := range guildRoles {
-					if gr.Name == "Other Games" {
-						updatedRoles = append(updatedRoles, gr.ID)
-						role = "Other Games"
-					}
-				}
-			}
-			if role == "" {
-				guild, e := s.Guild(cfg.GuildID)
-				if e != nil {
-					log.Println("Error:", e)
-				}
-				role = guild.Name
-				updatedRoles = append(updatedRoles, guild.ID)
-				log.Println("No role by name \"Other Games\", putting user in default role")
-			}
-		}
-	}
-	log.Println("Changing user role to:", role)
-	if e := s.GuildMemberEdit(cfg.GuildID, p.User.ID, updatedRoles); e != nil {
-		log.Println("Error:", e)
-	}
+	correctRoles(s, &p.Presence)
 }
 func correctRoles(s *discordgo.Session, p *discordgo.Presence) {
 	if authenticate(s, p.User) {
