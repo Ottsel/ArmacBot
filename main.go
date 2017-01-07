@@ -70,7 +70,7 @@ func main() {
 	dg.AddHandlerOnce(ready)
 	dg.AddHandler(messageCreate)
 	dg.AddHandler(presenceUpdate)
-	dg.AddHandler(voiceState)
+	//dg.AddHandler(voiceState)
 	if e := dg.Open(); e != nil {
 		log.Println("Error:", e)
 		return
