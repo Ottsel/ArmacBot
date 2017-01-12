@@ -84,7 +84,6 @@ func init() {
 		}
 	}
 }
-
 func ready(s *discordgo.Session, event *discordgo.Event) {
 	go func() {
 		time.Sleep(time.Second * 2)
@@ -268,6 +267,7 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 				return
 			}
 		}
+
 	}
 }
 func listSounds(s *discordgo.Session) {
