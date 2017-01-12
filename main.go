@@ -12,6 +12,26 @@ import (
 	"time"
 )
 
+// main function
+func main() {
+	dg, e := discordgo.New("Bot " + cfg.BotToken)
+	if e != nil {
+		log.Println("Error:", e)
+		return
+	}
+	dg.AddHandlerOnce(ready)
+	dg.AddHandler(messageCreate)
+	dg.AddHandler(presenceUpdate)
+	//dg.AddHandler(voiceState)
+	if e := dg.Open(); e != nil {
+		log.Println("Error:", e)
+		return
+	}
+	<-make(chan struct{})
+	return
+}
+
+// vars and declarations here
 var (
 	sounds      []os.FileInfo
 	adminRoleID string
@@ -28,6 +48,8 @@ type Configuration struct {
 }
 
 var cfg Configuration
+
+// functions after here
 
 func init() {
 	if _, e := os.Stat("sounds"); os.IsNotExist(e) {
@@ -61,23 +83,7 @@ func init() {
 		}
 	}
 }
-func main() {
-	dg, e := discordgo.New("Bot " + cfg.BotToken)
-	if e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	dg.AddHandlerOnce(ready)
-	dg.AddHandler(messageCreate)
-	dg.AddHandler(presenceUpdate)
-	//dg.AddHandler(voiceState)
-	if e := dg.Open(); e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	<-make(chan struct{})
-	return
-}
+
 func ready(s *discordgo.Session, event *discordgo.Event) {
 	go func() {
 		time.Sleep(time.Second * 2)
