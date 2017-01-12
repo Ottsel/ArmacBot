@@ -15,6 +15,7 @@ import (
 var (
 	sounds      []os.FileInfo
 	adminRoleID string
+	botID       string
 	configText  []byte = []byte("{\n\t\"BotToken\": \"\",\n\t\"GuildID\": \"\",\n\n\t\"SoundboardCommandKey\": \"!\",\n\t\"AdminCommandKey\": \"*\",\n\n\t\"CommandChannelName\": \"\",\n \n\t\"SoundboardMessageID\": \"\"\n}")
 )
 
@@ -70,7 +71,7 @@ func main() {
 	dg.AddHandlerOnce(ready)
 	dg.AddHandler(messageCreate)
 	dg.AddHandler(presenceUpdate)
-	//dg.AddHandler(voiceState)
+	dg.AddHandler(voiceState)
 	if e := dg.Open(); e != nil {
 		log.Println("Error:", e)
 		return
@@ -81,6 +82,7 @@ func main() {
 func ready(s *discordgo.Session, event *discordgo.Event) {
 	go func() {
 		time.Sleep(time.Second * 2)
+		botID = s.State.User.ID
 		guild, e := s.Guild(cfg.GuildID)
 		if e != nil {
 			log.Println("Error:", e)
@@ -197,7 +199,7 @@ func voiceState(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	if e != nil {
 		log.Println("Error:", e)
 	}
-	if !user.User.Bot && !vsu.SelfMute && !vsu.SelfDeaf {
+	if !user.User.Bot {
 		file := (strings.ToLower(user.User.Username) + ".mp3")
 		playSound(s, user.User, file)
 	}
@@ -236,10 +238,15 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 		log.Println("Error:", e)
 		return
 	}
+	var botVC string
+	for _, v := range guild.VoiceStates {
+		if v.UserID == botID {
+			botVC = v.ChannelID
+		}
+	}
 	for _, v := range guild.VoiceStates {
 		if v.UserID == user.ID {
-			if v.ChannelID != "" {
-				var e error
+			if v.ChannelID != "" && v.ChannelID != botVC {
 				vc, e := s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
 				if e != nil {
 					log.Println("Error:", e)
@@ -255,6 +262,7 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 				return
 			}
 		}
+
 	}
 }
 func listSounds(s *discordgo.Session) {
