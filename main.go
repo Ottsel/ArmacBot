@@ -206,7 +206,26 @@ func voiceState(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	}
 	if !user.User.Bot {
 		file := (strings.ToLower(user.User.Username) + ".mp3")
-		playSound(s, user.User, file)
+		guild, e := s.Guild(cfg.GuildID)
+		if e != nil {
+			log.Println("Error:", e)
+			return
+		}
+		var botVC string
+		for _, v := range guild.VoiceStates {
+			if v.UserID == botID {
+				botVC = v.ChannelID
+			}
+		}
+		for _, v := range guild.VoiceStates {
+			if v.UserID == user.ID {
+				if v.ChannelID != botVC && v.ChannelID != "" {
+					playSound(s, user.User, file)
+				} else {
+					return
+				}
+			}
+		}
 	}
 }
 func authenticate(s *discordgo.Session, u *discordgo.User) bool {
@@ -238,37 +257,17 @@ func authenticate(s *discordgo.Session, u *discordgo.User) bool {
 	return false
 }
 func playSound(s *discordgo.Session, user *discordgo.User, file string) {
-	guild, e := s.Guild(cfg.GuildID)
+	vc, e := s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
 	if e != nil {
 		log.Println("Error:", e)
 		return
 	}
-	var botVC string
-	for _, v := range guild.VoiceStates {
-		if v.UserID == botID {
-			botVC = v.ChannelID
-		}
-	}
-	for _, v := range guild.VoiceStates {
-		if v.UserID == user.ID {
-			if v.ChannelID != "" && v.ChannelID != botVC {
-				vc, e := s.ChannelVoiceJoin(cfg.GuildID, v.ChannelID, false, false)
-				if e != nil {
-					log.Println("Error:", e)
-					return
-				}
-				log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-				KillPlayer()
-				go func() {
-					time.Sleep(time.Millisecond * 200)
-					PlayAudioFile(vc, ("sounds/" + file))
-				}()
-			} else {
-				return
-			}
-		}
-
-	}
+	log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
+	KillPlayer()
+	go func() {
+		time.Sleep(time.Millisecond * 200)
+		PlayAudioFile(vc, ("sounds/" + file))
+	}()
 }
 func listSounds(s *discordgo.Session) {
 	var sounds string
