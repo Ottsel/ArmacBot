@@ -98,7 +98,7 @@ func ready(s *discordgo.Session, event *discordgo.Event) {
 		listSounds(s)
 	}()
 	go func() {
-		for _ {
+		for {
 			time.Sleep(time.Second * 30)
 			listSounds(s)
 		}
