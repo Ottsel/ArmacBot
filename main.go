@@ -97,6 +97,12 @@ func ready(s *discordgo.Session, event *discordgo.Event) {
 		}
 		listSounds(s)
 	}()
+	go func() {
+		for _ {
+			time.Sleep(time.Second * 30)
+			listSounds(s)
+		}
+	}()
 }
 func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
 	if !mc.Author.Bot {
@@ -273,12 +279,20 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 		log.Println("Error:", e)
 		return
 	}
-	log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-	KillPlayer()
-	go func() {
-		time.Sleep(time.Millisecond * 200)
-		PlayAudioFile(vc, ("sounds/" + file))
-	}()
+	var botVC string
+	for _, v := range guild.VoiceStates {
+		if v.UserID == botID {
+			botVC = v.ChannelID
+		}
+	}
+	if botVC == userVC {
+		log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
+		KillPlayer()
+		go func() {
+			time.Sleep(time.Millisecond * 200)
+			PlayAudioFile(vc, ("sounds/" + file))
+		}()
+	}
 }
 func listSounds(s *discordgo.Session) {
 	var sounds string
