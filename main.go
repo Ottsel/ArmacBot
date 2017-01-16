@@ -279,7 +279,7 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 		log.Println("Error:", e)
 		return
 	}
-	guild, e := s.Guild(cfg.GuildID)
+	guild, e = s.Guild(cfg.GuildID)
 	if e != nil {
 		log.Println("Error:", e)
 		return
