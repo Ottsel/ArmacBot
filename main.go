@@ -279,6 +279,11 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 		log.Println("Error:", e)
 		return
 	}
+	guild, e := s.Guild(cfg.GuildID)
+	if e != nil {
+		log.Println("Error:", e)
+		return
+	}
 	var botVC string
 	for _, v := range guild.VoiceStates {
 		if v.UserID == botID {
