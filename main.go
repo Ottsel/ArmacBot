@@ -212,7 +212,7 @@ func voiceState(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	}
 	if !user.User.Bot {
 		file := (strings.ToLower(user.User.Username) + ".mp3")
-		if _, e := os.Stat("sounds/", file); os.IsNotExist(e) {
+		if _, e := os.Stat("sounds/" + file); os.IsNotExist(e) {
 			log.Println("No entrance for user: ", user.User.Username)
 		} else {
 			guild, e := s.Guild(cfg.GuildID)
