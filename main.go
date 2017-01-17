@@ -279,25 +279,12 @@ func playSound(s *discordgo.Session, user *discordgo.User, file string) {
 		log.Println("Error:", e)
 		return
 	}
-	guild, e = s.Guild(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	var botVC string
-	for _, v := range guild.VoiceStates {
-		if v.UserID == botID {
-			botVC = v.ChannelID
-		}
-	}
-	if botVC == userVC {
-		log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-		KillPlayer()
-		go func() {
-			time.Sleep(time.Millisecond * 200)
-			PlayAudioFile(vc, ("sounds/" + file))
-		}()
-	}
+	log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
+	KillPlayer()
+	go func() {
+		time.Sleep(time.Millisecond * 200)
+		PlayAudioFile(vc, ("sounds/" + file))
+	}()
 }
 func listSounds(s *discordgo.Session) {
 	var sounds string
