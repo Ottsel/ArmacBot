@@ -212,23 +212,27 @@ func voiceState(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	}
 	if !user.User.Bot {
 		file := (strings.ToLower(user.User.Username) + ".mp3")
-		guild, e := s.Guild(cfg.GuildID)
-		if e != nil {
-			log.Println("Error:", e)
-			return
-		}
-		var botVC string
-		for _, v := range guild.VoiceStates {
-			if v.UserID == botID {
-				botVC = v.ChannelID
+		if _, e := os.Stat("sounds/", file); os.IsNotExist(e) {
+			log.Println("No entrance for user: ", user.User.Username)
+		} else {
+			guild, e := s.Guild(cfg.GuildID)
+			if e != nil {
+				log.Println("Error:", e)
+				return
 			}
-		}
-		for _, v := range guild.VoiceStates {
-			if v.UserID == user.User.ID {
-				if v.ChannelID != botVC && v.ChannelID != "" {
-					playSound(s, user.User, file)
-				} else {
-					return
+			var botVC string
+			for _, v := range guild.VoiceStates {
+				if v.UserID == botID {
+					botVC = v.ChannelID
+				}
+			}
+			for _, v := range guild.VoiceStates {
+				if v.UserID == user.User.ID {
+					if v.ChannelID != botVC && v.ChannelID != "" {
+						playSound(s, user.User, file)
+					} else {
+						return
+					}
 				}
 			}
 		}
