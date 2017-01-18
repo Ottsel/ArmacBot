@@ -138,7 +138,7 @@ func ReceivePCM(v *discordgo.VoiceConnection, c chan *discordgo.Packet) {
 func PlayAudioFile(v *discordgo.VoiceConnection, filename string) {
 
 	// Create a shell command "object" to run.
-	run = exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-af", "\"volume=0.5\"", "-ar", strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
+	run = exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar", strconv.Itoa(frameRate), "-ac", strconv.Itoa(channels), "pipe:1")
 	ffmpegout, err := run.StdoutPipe()
 	if err != nil {
 		fmt.Println("StdoutPipe Error:", err)

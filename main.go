@@ -2,8 +2,7 @@ package main
 
 import (
 	"C"
-	"bytes"
-	"encoding/json"
+	"flag"
 	"github.com/bwmarrin/discordgo"
 	"io/ioutil"
 	"log"
@@ -12,341 +11,200 @@ import (
 	"time"
 )
 
-// main function
+var (
+	sounds      []os.FileInfo
+	adminRoleID string
+	botID       string
+)
+
 func main() {
-	dg, e := discordgo.New("Bot " + cfg.BotToken)
-	if e != nil {
-		log.Println("Error:", e)
+	var (
+		Token = flag.String("t", "", "Discord Authentication Token")
+	)
+	flag.Parse()
+
+	dg, e := discordgo.New("Bot " + *Token)
+	if err(e, "") {
 		return
 	}
-	dg.AddHandlerOnce(ready)
 	dg.AddHandler(messageCreate)
 	dg.AddHandler(presenceUpdate)
 	dg.AddHandler(voiceState)
-	if e := dg.Open(); e != nil {
-		log.Println("Error:", e)
+	dg.AddHandler(onGuildCreate)
+	e = dg.Open()
+	if err(e, "") {
 		return
 	}
 	<-make(chan struct{})
 	return
 }
-
-// vars and declarations here
-var (
-	sounds      []os.FileInfo
-	adminRoleID string
-	botID       string
-	configText  []byte = []byte("{\n\t\"BotToken\": \"\",\n\t\"GuildID\": \"\",\n\n\t\"SoundboardCommandKey\": \"!\",\n\t\"AdminCommandKey\": \"*\",\n\n\t\"CommandChannelName\": \"\",\n \n\t\"SoundboardMessageID\": \"\"\n}")
-)
-
-type Configuration struct {
-	BotToken             string
-	GuildID              string
-	SoundboardCommandKey string
-	AdminCommandKey      string
-	CommandChannelName   string
-	SoundboardMessageID  string
-}
-
-var cfg Configuration
-
-// functions after here
-
-func init() {
-	if _, e := os.Stat("sounds"); os.IsNotExist(e) {
-		log.Println("No 'sounds' directory found, creating one")
-		os.Mkdir("sounds", os.ModeDir)
-	}
-	sounds, _ = ioutil.ReadDir("sounds")
-
-	if _, e := os.Stat("config.json"); os.IsNotExist(e) {
-		os.Create("config.json")
-		ioutil.WriteFile("config.json", configText, os.ModePerm)
-		log.Println("No config file found, creating one. Please configure and restart")
+func onGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
+	if event.Guild.Unavailable == true {
 		return
 	}
-	configFile, _ := os.Open("config.json")
-	configFileContents, e := ioutil.ReadFile("config.json")
-	if e != nil {
-		log.Println(e)
-		return
+	if !isConfigured(event.Guild) {
+		s.ChannelMessageSend(event.Guild.ID, "Not configured. Type `"+cfg.AdminCommandKey+"config` in the channel you would like to keep commands in.")
 	}
-	if bytes.Compare(configFileContents, configText) == 0 {
-		log.Println("Not configured, aborting. Please configure and restart")
-		return
-	} else {
-		decoder := json.NewDecoder(configFile)
-		cfg = Configuration{}
-		e := decoder.Decode(&cfg)
-		if e != nil {
-			log.Println("Error:", e)
-			return
-		}
-	}
-}
-func ready(s *discordgo.Session, event *discordgo.Event) {
-	go func() {
-		time.Sleep(time.Second * 2)
-		botID = s.State.User.ID
-		guild, e := s.Guild(cfg.GuildID)
-		if e != nil {
-			log.Println("Error:", e)
-		}
-		for _, p := range guild.Presences {
-			correctRoles(s, p)
-		}
-		listSounds(s)
-	}()
-	go func() {
-		for {
-			time.Sleep(time.Second * 30)
-			listSounds(s)
-		}
-	}()
+	roleFix(s, event.Guild)
 }
 func messageCreate(s *discordgo.Session, mc *discordgo.MessageCreate) {
-	if !mc.Author.Bot {
-		if strings.HasPrefix(mc.Content, cfg.AdminCommandKey+"forget ") {
-			if authenticate(s, mc.Author) {
-				log.Println("Authenticated user:", mc.Author.Username)
-				forget(s, mc)
-			} else {
-				log.Println("Failed to authenticate user:", mc.Author.Username)
-			}
-		}
-		if strings.HasPrefix(mc.Content, cfg.SoundboardCommandKey) {
-			channel, e := s.Channel(mc.ChannelID)
-			if e != nil {
-				log.Println("Error:", e)
-			}
-			if channel.Name != cfg.CommandChannelName {
-				e := s.ChannelMessageDelete(channel.ID, mc.ID)
-				if e != nil {
-					log.Println("Couldn't delete message:", mc.Content)
-					log.Println("Error:", e)
+	g := getGuild(s, mc.ChannelID)
+	config(g)
+
+	/*
+	 *	Admin commands
+	 */
+
+	//Configure via Discord
+	if strings.HasPrefix(mc.Content, cfg.AdminCommandKey+"config") {
+		if !isConfigured(g) {
+			if authenticate(s, g.ID, mc.Author) {
+				m, e := s.ChannelMessageSend(mc.ChannelID, "Listing available sounds and pinning message...")
+				if err(e, "Couldn't post message: "+m.Content) {
+					return
+				}
+				writeConfig(g, mc.ChannelID, m.ID)
+				listSounds(s, g)
+				e = s.ChannelMessagePin(m.ChannelID, m.ID)
+				if err(e, "") {
+					return
 				}
 			}
-			if mc.Content == cfg.SoundboardCommandKey+"stop" {
-				KillPlayer()
+		}
+	}
+
+	//Corrects the roles of the current guild
+	if strings.HasPrefix(mc.Content, cfg.AdminCommandKey+"fixroles ") {
+		if authenticate(s, g.ID, mc.Author) {
+			roleFix(s, g)
+		} else {
+			log.Println("Failed to authenticate user:", mc.Author.Username)
+		}
+	}
+	//Deletes messages up to a specified message
+	if strings.HasPrefix(mc.Content, cfg.AdminCommandKey+"forget ") {
+		if authenticate(s, g.ID, mc.Author) {
+			log.Println("Authenticated user:", mc.Author.Username)
+			forget(s, mc)
+		} else {
+			log.Println("Failed to authenticate user:", mc.Author.Username)
+		}
+	}
+
+	/*
+	 *	Soundboard commands
+	 */
+
+	if strings.HasPrefix(mc.Content, cfg.SoundboardCommandKey) {
+		channel, e := s.Channel(mc.ChannelID)
+		if err(e, "") {
+			return
+		}
+		if channel.ID != cfg.CommandChannelID {
+			e := s.ChannelMessageDelete(channel.ID, mc.ID)
+			if err(e, "Couldn't delete message:"+mc.Content) {
 				return
 			}
-			soundString := strings.Replace(mc.Content, cfg.SoundboardCommandKey, "", 1) + ".mp3"
-			sounds, _ = ioutil.ReadDir("sounds")
-			for _, f := range sounds {
-				if f.Name() == soundString {
-					playSound(s, mc.Author, soundString)
-				}
-			}
 		}
-		if strings.HasPrefix(mc.Content, cfg.AdminCommandKey+"help") {
-			if authenticate(s, mc.Author) {
-				help(s, mc)
-			}
+		//Stop the player
+		if mc.Content == cfg.SoundboardCommandKey+"stop" {
+			KillPlayer()
+			return
 		}
-	}
-}
-func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-	correctRoles(s, &p.Presence)
-}
-func correctRoles(s *discordgo.Session, p *discordgo.Presence) {
-	if authenticate(s, p.User) {
-		log.Println("Admin, cannot modify role")
-		return
-	}
-	var updatedRoles []string
-	var role string
-
-	guildRoles, e := s.GuildRoles(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	for _, gr := range guildRoles {
-		if p.User.Bot {
-			if gr.Name == "Bots" {
-				role = "Bot"
-				updatedRoles = append(updatedRoles, gr.ID)
-			}
-		} else {
-			if p.Game != nil {
-				if gr.Name == p.Game.Name {
-					role = gr.Name
-					updatedRoles = append(updatedRoles, gr.ID)
-				}
-			} else {
-				guild, e := s.Guild(cfg.GuildID)
-				if e != nil {
-					log.Println("Error:", e)
-				}
-				role = guild.Name
-				updatedRoles = append(updatedRoles, guild.ID)
-			}
-			if role == "" {
-				for _, gr := range guildRoles {
-					if gr.Name == "Other Games" {
-						updatedRoles = append(updatedRoles, gr.ID)
-						role = "Other Games"
-					}
-				}
-			}
-			if role == "" {
-				guild, e := s.Guild(cfg.GuildID)
-				if e != nil {
-					log.Println("Error:", e)
-				}
-				role = guild.Name
-				updatedRoles = append(updatedRoles, guild.ID)
-				log.Println("No role by name \"Other Games\", putting user in default role")
+		//Play a requested sound
+		soundString := strings.Replace(mc.Content, cfg.SoundboardCommandKey, "", 1) + ".mp3"
+		sounds, _ = ioutil.ReadDir(soundDir)
+		for _, f := range sounds {
+			if f.Name() == soundString {
+				playSound(s, g, mc.Author, soundString)
 			}
 		}
 	}
-	log.Println("Changing user role to:", role)
-	if e := s.GuildMemberEdit(cfg.GuildID, p.User.ID, updatedRoles); e != nil {
-		log.Println("Error:", e)
+	//Post a list of admin commands
+	if strings.HasPrefix(mc.Content, cfg.AdminCommandKey+"help") {
+		if authenticate(s, g.ID, mc.Author) {
+			help(s, mc)
+		}
 	}
 }
 func voiceState(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
-	user, e := s.GuildMember(cfg.GuildID, vsu.UserID)
-	if e != nil {
-		log.Println("Error:", e)
-	}
-	if !user.User.Bot {
-		file := (strings.ToLower(user.User.Username) + ".mp3")
-		if _, e := os.Stat("sounds/" + file); os.IsNotExist(e) {
-			log.Println("No entrance for user: ", user.User.Username)
-		} else {
-			guild, e := s.Guild(cfg.GuildID)
-			if e != nil {
-				log.Println("Error:", e)
-				return
-			}
-			var botVC string
-			for _, v := range guild.VoiceStates {
-				if v.UserID == botID {
-					botVC = v.ChannelID
-				}
-			}
-			for _, v := range guild.VoiceStates {
-				if v.UserID == user.User.ID {
-					if v.ChannelID != botVC && v.ChannelID != "" {
-						playSound(s, user.User, file)
-					} else {
-						return
-					}
-				}
-			}
-		}
-	}
-}
-func authenticate(s *discordgo.Session, u *discordgo.User) bool {
-	user, e := s.GuildMember(cfg.GuildID, u.ID)
-	if e != nil {
-		log.Println("Error:", e)
-		return false
-	}
-	roles, e := s.GuildRoles(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
-		return false
-	}
-	for _, ar := range roles {
-		if ar.Name == "Admin" {
-			adminRoleID = ar.ID
-		}
-	}
-	if adminRoleID != "" {
-		for _, r := range user.Roles {
-			if r == adminRoleID {
-				return true
-			}
-		}
-	} else {
-		log.Println("No role by name of \"Admin\", Things might not go so well :/")
-		return false
-	}
-	return false
-}
-func playSound(s *discordgo.Session, user *discordgo.User, file string) {
-	guild, e := s.Guild(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
+	guild, e := s.Guild(vsu.GuildID)
+	if err(e, "") {
 		return
 	}
+	config(guild)
+	user, e := s.GuildMember(vsu.GuildID, vsu.UserID)
+	if err(e, "") {
+		return
+	}
+
+	file := (strings.ToLower(user.User.Username) + ".mp3")
+	if _, e := os.Stat(soundDir + "/" + file); os.IsNotExist(e) {
+		log.Println("No entrance for user: ", user.User.Username)
+	} else {
+		guild, e := s.Guild(vsu.GuildID)
+		if err(e, "") {
+			return
+		}
+		var botVC string
+		for _, v := range guild.VoiceStates {
+			if v.UserID == botID {
+				botVC = v.ChannelID
+			}
+		}
+		for _, v := range guild.VoiceStates {
+			if v.UserID == user.User.ID {
+				if v.ChannelID != botVC && v.ChannelID != "" {
+					playSound(s, guild, user.User, file)
+				} else {
+					return
+				}
+			}
+		}
+	}
+}
+func playSound(s *discordgo.Session, g *discordgo.Guild, user *discordgo.User, file string) {
+	config(g)
 	var userVC string
-	for _, v := range guild.VoiceStates {
+	for _, v := range g.VoiceStates {
 		if v.UserID == user.ID {
 			userVC = v.ChannelID
 		}
 	}
-	vc, e := s.ChannelVoiceJoin(cfg.GuildID, userVC, false, false)
-	if e != nil {
-		log.Println("Error:", e)
+	vc, e := s.ChannelVoiceJoin(g.ID, userVC, false, false)
+	if err(e, "") {
 		return
 	}
-	log.Println("Attempting to play audio file \"" + file + "\" for user: " + user.Username)
-	KillPlayer()
 	go func() {
 		time.Sleep(time.Millisecond * 200)
-		PlayAudioFile(vc, ("sounds/" + file))
+		g, e = s.Guild(g.ID)
+		for _, v := range g.VoiceStates {
+			if v.UserID == s.State.User.ID {
+				if v.ChannelID == userVC {
+					listSounds(s, g)
+					log.Println("Attempting to play audio file \"" + soundDir + "/" + file + "\" for user: " + user.Username)
+					KillPlayer()
+					time.Sleep(time.Millisecond * 200)
+					PlayAudioFile(vc, (soundDir + "/" + file))
+				}
+			}
+		}
 	}()
 }
-func listSounds(s *discordgo.Session) {
+func listSounds(s *discordgo.Session, g *discordgo.Guild) {
+	config(g)
 	var sounds string
-	files, _ := ioutil.ReadDir("sounds")
+	files, _ := ioutil.ReadDir(soundDir)
 	for _, f := range files {
-		if !strings.HasSuffix(strings.ToLower(f.Name()), ".ogg") {
-			sounds += cfg.SoundboardCommandKey + strings.Replace(f.Name(), ".mp3", "", 1) + "\n"
-		}
+		sounds += cfg.SoundboardCommandKey + strings.Replace(f.Name(), ".mp3", "", 1) + "\n"
 	}
-	guildChannels, e := s.GuildChannels(cfg.GuildID)
-	if e != nil {
-		log.Println("Error:", e)
+	if sounds == "" {
+		sounds = "(No mp3 files in directory: " + soundDir + ")"
+	}
+	m, e := s.ChannelMessageEdit(cfg.CommandChannelID, cfg.SoundboardMessageID, sounds)
+	if err(e, "Couldn't edit soundboard message with ID: "+m.ID) {
 		return
-	}
-	for _, c := range guildChannels {
-		if cfg.CommandChannelName == c.Name {
-			m, e := s.ChannelMessageEdit(c.ID, cfg.SoundboardMessageID, sounds)
-			if e != nil {
-				log.Println("Couldn't edit message:", m.Content)
-				log.Println("Error:", e)
-				return
-			} else {
-				log.Println("Sounds Updated")
-			}
-		}
-	}
-}
-func forget(session *discordgo.Session, mc *discordgo.MessageCreate) {
-	channel, e := session.Channel(mc.ChannelID)
-	if e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	var untilMsg = strings.Replace(mc.Content, "*forget ", "", -1)
-	messages, e := session.ChannelMessages(mc.ChannelID, 100, channel.LastMessageID, untilMsg)
-	if e != nil {
-		log.Println("Error:", e)
-		return
-	}
-	for _, m := range messages {
-		if m.ID != cfg.SoundboardMessageID {
-			if e := session.ChannelMessageDelete(mc.ChannelID, m.ID); e != nil {
-				log.Println("Couldn't delete message: " + m.Content)
-				log.Println("Error:", e)
-				return
-			} else {
-				log.Println("Deleting message: " + m.Content)
-			}
-		}
-	}
-}
-func help(session *discordgo.Session, mc *discordgo.MessageCreate) {
-	if m, e := session.ChannelMessageSend(mc.ChannelID, (cfg.AdminCommandKey + "`help - Shows this dialog.`")); e != nil {
-		log.Println("Could not post message: ", m)
-		log.Println("Error:", e)
-	}
-	if m, e := session.ChannelMessageSend(mc.ChannelID, ("`" + cfg.AdminCommandKey + "forget [messageID] - Deletes messages down to a specified message.`")); e != nil {
-		log.Println("Could not post message: ", m)
-		log.Println("Error:", e)
+	} else {
+		log.Println("Sounds Updated")
 	}
 }
