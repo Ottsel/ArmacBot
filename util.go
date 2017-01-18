@@ -51,8 +51,8 @@ func authenticate(s *discordgo.Session, g string, u *discordgo.User) bool {
 	return false
 }
 func config(g *discordgo.Guild) {
-	soundDir = strings.ToLower(strings.Replace(g.Name, " ", "", -1)) + "/sounds"
-	configPath = strings.ToLower(strings.Replace(g.Name, " ", "", -1)) + "/config.json"
+	soundDir = "armacbot/" + strings.ToLower(strings.Replace(g.Name, " ", "", -1)) + "/sounds"
+	configPath = "armacbot/" + strings.ToLower(strings.Replace(g.Name, " ", "", -1)) + "/config.json"
 	if _, e := os.Stat(soundDir); os.IsNotExist(e) {
 		log.Println("No '" + soundDir + "' directory found, creating one")
 		os.MkdirAll(soundDir, os.ModeDir)
